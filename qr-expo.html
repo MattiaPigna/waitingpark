@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaitingPark — Scan QR</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+      max-width: 360px;
+      width: 100%;
+    }
+    .logo {
+      width: 72px;
+      height: 72px;
+      background: #4F46E5;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 32px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1a1a2e;
+      letter-spacing: -0.5px;
+    }
+    p.sub {
+      font-size: 14px;
+      color: #888;
+      margin: 6px 0 28px;
+    }
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    #qrcode canvas, #qrcode img {
+      border-radius: 12px;
+      border: 1px solid #e5e5e5;
+    }
+    .url-box {
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: #4F46E5;
+      font-weight: 600;
+      word-break: break-all;
+      margin-bottom: 20px;
+    }
+    .steps {
+      text-align: left;
+      font-size: 13px;
+      color: #555;
+      line-height: 1.8;
+    }
+    .steps li { margin-left: 16px; }
+    .badge {
+      display: inline-block;
+      background: #4F46E510;
+      color: #4F46E5;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🚗</div>
+    <h1>WaitingPark</h1>
+    <p class="sub">Il parcheggio che ti aspettava</p>
+
+    <span class="badge">EXPO GO — DEV MODE</span>
+
+    <div id="qrcode"></div>
+
+    <div class="url-box" id="expo-url">exp://vxopu_8-anonymous-8082.exp.direct</div>
+
+    <ol class="steps">
+      <li>Installa <strong>Expo Go</strong> sul telefono</li>
+      <li>Assicurati di essere sulla <strong>stessa rete Wi-Fi</strong></li>
+      <li>Scansiona il QR con la fotocamera (iOS) o con <strong>Expo Go</strong> (Android)</li>
+    </ol>
+  </div>
+
+  <script>
+    const url = 'exp://vxopu_8-anonymous-8082.exp.direct';
+    new QRCode(document.getElementById('qrcode'), {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#1a1a2e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  </script>
+</body>
+</html>

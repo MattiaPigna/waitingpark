@@ -1,0 +1,10 @@
+Per avviare l'app — 3 passi
+
+  1. Apri il terminale nella cartella e digita:
+  npm install
+
+  2. Configura Firebase in src/services/firebase.ts (istruzioni dettagliate in SETUP.md)
+
+  3. Avvia:
+  npx expo start
+  Poi scansiona il QR con Expo Go sul telefono.

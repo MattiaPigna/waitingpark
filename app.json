@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "WaitingPark",
+    "slug": "waitingpark",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4F46E5"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.waitingpark.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "WaitingPark usa la tua posizione per trovare parcheggi vicino a te.",
+        "NSLocationAlwaysUsageDescription": "WaitingPark usa la tua posizione per notificarti quando si libera un posto vicino."
+      },
+      "config": {
+        "googleMapsApiKey": "INSERISCI_QUI_LA_TUA_GOOGLE_MAPS_API_KEY"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F46E5"
+      },
+      "package": "com.waitingpark.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "INSERISCI_QUI_LA_TUA_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "WaitingPark usa la posizione per trovare parcheggi vicino a te."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4F46E5"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "INSERISCI_QUI_IL_TUO_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

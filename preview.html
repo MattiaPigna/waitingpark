@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaitingPark — Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: #18181b;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  /* PHONE FRAME */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #F8FAFC;
+    border-radius: 54px;
+    border: 10px solid #2a2a2e;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px #3a3a3e, 0 40px 80px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .notch {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 34px;
+    background: #2a2a2e;
+    border-radius: 0 0 20px 20px;
+    z-index: 100;
+  }
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    z-index: 99;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1E293B;
+    background: transparent;
+    pointer-events: none;
+  }
+  .status-bar.light { color: #fff; }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  /* SCREENS */
+  .screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #F8FAFC;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .screen.active { display: flex; }
+  .screen-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: 50px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen-content::-webkit-scrollbar { display: none; }
+  /* TAB BAR */
+  .tab-bar {
+    height: 82px;
+    background: #fff;
+    border-top: 1px solid #E2E8F0;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 10px;
+    flex-shrink: 0;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: opacity .15s;
+  }
+  .tab-item:active { opacity: 0.7; }
+  .tab-icon { font-size: 22px; line-height: 1; }
+  .tab-label { font-size: 10px; font-weight: 600; color: #94A3B8; }
+  .tab-item.active .tab-label { color: #4F46E5; }
+  .tab-item.active .tab-dot { width: 4px; height: 4px; background: #4F46E5; border-radius: 2px; margin-top: 2px; }
+  /* BUTTONS */
+  .btn-primary {
+    background: #4F46E5; color: #fff; border: none;
+    border-radius: 16px; padding: 17px 24px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .15s, transform .1s;
+  }
+  .btn-primary:active { background: #3730A3; transform: scale(0.98); }
+  .btn-leaving { background: #EF4444; }
+  .btn-leaving:active { background: #dc2626; }
+  .btn-searching { background: #10B981; }
+  .btn-searching:active { background: #059669; }
+  .btn-outline {
+    background: transparent; color: #4F46E5;
+    border: 1.5px solid #4F46E5;
+    border-radius: 16px; padding: 15px 24px;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; width: 100%;
+    transition: background .15s;
+  }
+  .btn-outline:active { background: rgba(79,70,229,0.05); }
+  .btn-outline-red { color: #EF4444; border-color: #EF4444; }
+  /* INPUTS */
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-label { font-size: 13px; font-weight: 600; color: #64748B; }
+  .input-wrap { position: relative; }
+  .input-field {
+    width: 100%; padding: 14px 16px;
+    border: 1.5px solid #E2E8F0; border-radius: 12px;
+    font-size: 15px; color: #1E293B; background: #fff;
+    outline: none; transition: border-color .15s;
+  }
+  .input-field:focus { border-color: #4F46E5; }
+  /* CARDS */
+  .card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+  }
+  /* TRANSITIONS */
+  .screen { animation: none; }
+  .screen.slide-in { animation: slideIn .2s ease forwards; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.15); opacity: 0.2; }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── WELCOME ── */
+  #welcome .screen-content {
+    display: flex; flex-direction: column;
+    padding: 50px 24px 0;
+  }
+  .wp-hero { display: flex; flex-direction: column; align-items: center; padding: 32px 0 28px; }
+  .wp-logo {
+    width: 100px; height: 100px; border-radius: 28px;
+    background: #4F46E5; display: flex; align-items: center; justify-content: center;
+    font-size: 44px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(79,70,229,0.35);
+  }
+  .wp-title { font-size: 36px; font-weight: 800; color: #1E293B; letter-spacing: -1px; }
+  .wp-sub { font-size: 15px; color: #64748B; margin-top: 6px; }
+  .features { display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: center; }
+  .feature-row {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border-radius: 14px; padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .feature-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .feature-text { font-size: 13.5px; color: #1E293B; font-weight: 500; line-height: 1.4; flex: 1; }
+  .wp-actions { display: flex; flex-direction: column; gap: 10px; padding: 20px 0 28px; }
+  .link-btn { text-align: center; color: #4F46E5; font-size: 14px; font-weight: 600; cursor: pointer; padding: 10px; }
+
+  /* ── AUTH ── */
+  .auth-content { padding: 50px 24px 24px; display: flex; flex-direction: column; gap: 0; }
+  .auth-header { margin-bottom: 28px; }
+  .auth-title { font-size: 28px; font-weight: 800; color: #1E293B; letter-spacing: -0.5px; }
+  .auth-sub { font-size: 14px; color: #64748B; margin-top: 6px; }
+  .auth-form { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+
+  /* ── HOME ── */
+  #home { background: #e8f0e8; }
+  .map-bg {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 82px;
+    overflow: hidden;
+  }
+  .map-svg { width: 100%; height: 100%; }
+  .home-overlay {
+    position: absolute; top: 50px; left: 0; right: 0; bottom: 82px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    pointer-events: none;
+  }
+  .home-top { padding: 12px 16px; pointer-events: all; }
+  .home-header-card {
+    background: #fff; border-radius: 16px; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .home-greeting { font-size: 16px; font-weight: 700; color: #1E293B; }
+  .home-spots { font-size: 12px; color: #64748B; margin-top: 2px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 22px;
+    background: #4F46E5; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px; cursor: pointer;
+  }
+  .home-fab-area { display: flex; justify-content: flex-end; padding: 0 16px 12px; pointer-events: all; }
+  .fab {
+    width: 48px; height: 48px; border-radius: 24px;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;
+  }
+  .bottom-sheet {
+    background: #fff; border-radius: 28px 28px 0 0;
+    padding: 12px 16px 16px;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
+    pointer-events: all;
+  }
+  .handle { width: 40px; height: 4px; background: #E2E8F0; border-radius: 2px; margin: 0 auto 14px; }
+  .bs-title { font-size: 17px; font-weight: 700; color: #1E293B; margin-bottom: 12px; }
+  .action-btn {
+    display: flex; align-items: center; gap: 14px;
+    background: #F8FAFC; border-radius: 14px; padding: 14px;
+    border: 1.5px solid #E2E8F0; cursor: pointer; margin-bottom: 10px;
+    transition: background .15s;
+  }
+  .action-btn:active { background: #f1f5f9; }
+  .action-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+  }
+  .action-text { flex: 1; }
+  .action-title { font-size: 14px; font-weight: 700; color: #1E293B; }
+  .action-sub { font-size: 12px; color: #64748B; margin-top: 2px; }
+  .chevron { font-size: 14px; color: #94A3B8; }
+  .nearby-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: #D1FAE5; border-radius: 12px; padding: 10px 14px;
+  }
+  .nearby-text { font-size: 12.5px; color: #10B981; font-weight: 600; }
+
+  /* ── LEAVING ── */
+  .leaving-content { padding: 50px 16px 0; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  .leaving-content::-webkit-scrollbar { display: none; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding: 0 4px; }
+  .back-btn {
+    width: 40px; height: 40px; border-radius: 20px;
+    background: #fff; border: none; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .page-title { font-size: 17px; font-weight: 700; color: #1E293B; }
+  .mini-map {
+    border-radius: 16px; overflow: hidden; height: 160px;
+    background: linear-gradient(135deg, #c8d8c0 0%, #b8c8b0 50%, #c0d0b8 100%);
+    position: relative; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .mini-map::before {
+    content: ''; position: absolute; top: 50%; left: 0; right: 0;
+    height: 24px; background: rgba(255,255,255,0.5); transform: translateY(-50%);
+  }
+  .mini-map::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 24px; background: rgba(255,255,255,0.5); transform: translateX(-50%);
+  }
+  .map-marker {
+    width: 44px; height: 44px; border-radius: 22px;
+    background: #EF4444; border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; z-index: 2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .map-marker.green { background: #10B981; }
+  .map-marker.indigo { background: #4F46E5; }
+  .address-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #FEE2E2; border-radius: 12px; padding: 12px 14px;
+  }
+  .address-text { font-size: 14px; color: #1E293B; font-weight: 500; }
+  .section-label { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .timing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .timing-btn {
+    background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 14px;
+    cursor: pointer; transition: all .15s;
+  }
+  .timing-btn.active { background: #FEE2E2; border-color: #EF4444; }
+  .timing-label { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .timing-btn.active .timing-label { color: #EF4444; }
+  .timing-desc { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+  .timing-btn.active .timing-desc { color: #EF4444; }
+  .reward-banner {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #FEF3C7; border-radius: 12px; padding: 14px;
+  }
+  .reward-text { font-size: 13px; color: #1E293B; line-height: 1.6; flex: 1; }
+  .reward-amount { font-weight: 700; color: #F59E0B; }
+  .leaving-actions { padding: 0 0 28px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── LEAVING WAITING ── */
+  .waiting-container {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 60px 24px 28px; gap: 14px;
+  }
+  .pulse-wrap { position: relative; width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .pulse-ring {
+    position: absolute; border-radius: 50%;
+    background: rgba(239,68,68,0.15);
+    animation: pulse 2s infinite;
+  }
+  .pulse-ring-1 { width: 130px; height: 130px; animation-delay: 0s; }
+  .pulse-ring-2 { width: 100px; height: 100px; animation-delay: .4s; background: rgba(239,68,68,0.2); }
+  .pulse-core {
+    width: 68px; height: 68px; border-radius: 34px;
+    background: #FEE2E2; border: 2.5px solid #EF4444;
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+    z-index: 2;
+  }
+  .waiting-title { font-size: 24px; font-weight: 800; color: #1E293B; }
+  .waiting-sub { font-size: 14px; color: #64748B; text-align: center; line-height: 1.6; max-width: 260px; }
+  .info-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 12px; padding: 14px;
+    width: 100%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .info-text { font-size: 14px; color: #1E293B; font-weight: 500; }
+  .earning-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #D1FAE5; border-radius: 12px; padding: 14px; width: 100%;
+  }
+  .earning-text { font-size: 13px; color: #1E293B; line-height: 1.5; }
+  .earning-amt { font-weight: 700; color: #10B981; }
+
+  /* ── SEARCH ── */
+  .search-content { padding: 50px 16px 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; }
+  .search-content::-webkit-scrollbar { display: none; }
+  .radius-chips { display: flex; gap: 8px; }
+  .chip {
+    flex: 1; padding: 9px 4px; border: 1.5px solid #E2E8F0;
+    border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600;
+    color: #64748B; cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .chip.active { background: #D1FAE5; border-color: #10B981; color: #10B981; }
+  .search-type-grid { display: flex; flex-direction: column; gap: 10px; }
+  .type-card {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 16px;
+    cursor: pointer; transition: all .15s;
+  }
+  .type-card.active { background: #D1FAE5; border-color: #10B981; }
+  .type-icon { font-size: 24px; }
+  .type-title { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .type-desc { font-size: 12px; color: #64748B; margin-top: 2px; }
+
+  /* ── MATCH ── */
+  .match-content { padding: 50px 16px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  .match-content::-webkit-scrollbar { display: none; }
+  .match-header { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .match-title { font-size: 17px; font-weight: 700; color: #1E293B; }
+  .live-badge {
+    background: #D1FAE5; color: #10B981; font-size: 11px; font-weight: 800;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px;
+  }
+  .match-card {
+    background: #D1FAE5; border-radius: 16px; padding: 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .match-card-text .match-card-title { font-size: 16px; font-weight: 800; color: #1E293B; }
+  .match-card-text .match-card-sub { font-size: 13px; color: #64748B; margin-top: 4px; line-height: 1.5; }
+  .chat-section { display: flex; flex-direction: column; gap: 12px; }
+  .chat-title { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .quick-replies { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick-reply {
+    background: #fff; border: 1.5px solid #E2E8F0; border-radius: 20px;
+    padding: 8px 14px; font-size: 13px; font-weight: 500; color: #1E293B;
+    cursor: pointer; transition: all .15s;
+  }
+  .quick-reply:active { background: #4F46E5; color: #fff; border-color: #4F46E5; }
+  .messages { display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; }
+  .msg-received { background: #F1F5F9; color: #1E293B; border-bottom-left-radius: 4px; align-self: flex-start; }
+  .msg-sent { background: #4F46E5; color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+  .match-actions { display: flex; gap: 10px; padding-top: 4px; }
+  .match-actions .btn-primary { flex: 1; border-radius: 14px; padding: 16px; font-size: 14px; }
+  .match-actions .btn-outline { flex: 1; border-radius: 14px; padding: 14px; font-size: 14px; }
+
+  /* ── WALLET ── */
+  .wallet-content { padding: 50px 16px 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  .wallet-content::-webkit-scrollbar { display: none; }
+  .wallet-topbar { display: flex; align-items: center; justify-content: space-between; }
+  .wallet-title { font-size: 24px; font-weight: 800; color: #1E293B; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 20px; background: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: pointer;
+  }
+  .balance-card {
+    background: #4F46E5; border-radius: 24px; padding: 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(79,70,229,0.35);
+  }
+  .balance-label { color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; }
+  .balance-amount { color: #fff; font-size: 52px; font-weight: 800; letter-spacing: -2px; }
+  .balance-actions {
+    display: flex; align-items: center; gap: 24px;
+    background: rgba(255,255,255,0.15); border-radius: 30px;
+    padding: 10px 24px; margin-top: 4px;
+  }
+  .bal-btn { display: flex; align-items: center; gap: 6px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .bal-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.3); }
+  .stats-row { display: flex; gap: 10px; }
+  .stat-card {
+    flex: 1; background: #fff; border-radius: 14px; padding: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .stat-icon { font-size: 22px; }
+  .stat-value { font-size: 20px; font-weight: 800; color: #1E293B; }
+  .stat-label { font-size: 11px; color: #64748B; font-weight: 500; }
+  .reward-card {
+    background: #fff; border-radius: 16px; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .reward-header { display: flex; align-items: center; gap: 8px; }
+  .reward-title { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .progress-bar { height: 10px; background: #E2E8F0; border-radius: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #F59E0B; border-radius: 5px; width: 70%; }
+  .reward-footer { display: flex; justify-content: space-between; margin-top: -4px; }
+  .progress-label { font-size: 12px; color: #64748B; }
+  .progress-rem { font-size: 12px; font-weight: 600; color: #F59E0B; }
+  .milestones { display: flex; gap: 4px; }
+  .milestone {
+    flex: 1; aspect-ratio: 1; border-radius: 6px; background: #E2E8F0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; color: #94A3B8;
+  }
+  .milestone.done { background: #F59E0B; color: #fff; font-size: 10px; }
+  .tx-section { display: flex; flex-direction: column; gap: 10px; }
+  .tx-title { font-size: 16px; font-weight: 700; color: #1E293B; }
+  .tx-row {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border-radius: 12px; padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .tx-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .tx-icon.credit { background: #D1FAE5; }
+  .tx-icon.debit { background: #FEE2E2; }
+  .tx-icon.fuel { background: #FEF3C7; }
+  .tx-desc { font-size: 14px; font-weight: 600; color: #1E293B; }
+  .tx-date { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+  .tx-amount { font-size: 15px; font-weight: 700; margin-left: auto; }
+  .tx-amount.credit { color: #10B981; }
+  .tx-amount.debit { color: #EF4444; }
+
+  /* ── CHATS ── */
+  .chats-content { padding: 50px 16px 0; display: flex; flex-direction: column; overflow-y: auto; flex: 1; }
+  .chats-content::-webkit-scrollbar { display: none; }
+  .chats-title { font-size: 24px; font-weight: 800; color: #1E293B; padding: 16px 4px 20px; }
+  .chat-row {
+    display: flex; align-items: center; gap: 14px; padding: 14px 4px;
+    border-bottom: 1px solid #F1F5F9; cursor: pointer;
+  }
+  .chat-avatar {
+    width: 50px; height: 50px; border-radius: 25px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .chat-info { flex: 1; min-width: 0; }
+  .chat-name { font-size: 15px; font-weight: 700; color: #1E293B; }
+  .chat-last { font-size: 13px; color: #64748B; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .chat-time { font-size: 11px; color: #94A3B8; }
+  .chat-badge {
+    background: #4F46E5; color: #fff; font-size: 11px; font-weight: 700;
+    width: 20px; height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── PROFILE ── */
+  .profile-content { padding: 50px 16px 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; }
+  .profile-content::-webkit-scrollbar { display: none; }
+  .profile-header { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 10px; }
+  .profile-avatar {
+    width: 80px; height: 80px; border-radius: 40px;
+    background: #4F46E5; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 30px; font-weight: 700;
+    box-shadow: 0 4px 16px rgba(79,70,229,0.35);
+  }
+  .profile-name { font-size: 22px; font-weight: 800; color: #1E293B; }
+  .profile-email { font-size: 14px; color: #64748B; }
+  .profile-badge {
+    background: #D1FAE5; color: #10B981; font-size: 12px; font-weight: 700;
+    padding: 4px 14px; border-radius: 20px;
+  }
+  .settings-list { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .settings-row {
+    display: flex; align-items: center; gap: 14px; padding: 16px;
+    border-bottom: 1px solid #F1F5F9; cursor: pointer;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-icon { font-size: 20px; width: 24px; text-align: center; }
+  .settings-label { flex: 1; font-size: 15px; color: #1E293B; font-weight: 500; }
+  .settings-chevron { color: #94A3B8; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status-bar" id="statusBar">
+    <span>12:34</span>
+    <div class="status-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4" y="2" width="3" height="10" rx="1"/><rect x="8" y="1" width="3" height="11" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 24 16" fill="currentColor"><path d="M12 3C8.6 3 5.5 4.4 3.2 6.7L1 4.5C3.9 1.7 7.7 0 12 0s8.1 1.7 11 4.5L20.8 6.7C18.5 4.4 15.4 3 12 3z"/><path d="M12 8c-2 0-3.8.8-5.1 2.1L4.7 8C6.6 6.1 9.2 5 12 5s5.4 1.1 7.3 3l-2.2 2.1C15.8 8.8 14 8 12 8z"/><circle cx="12" cy="14" r="2"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="22" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1.5" y="2.5" width="17" height="7" rx="1"/><path d="M23 4v4a2 2 0 000-4z"/></svg>
+    </div>
+  </div>
+
+  <!-- WELCOME -->
+  <div class="screen active" id="welcome">
+    <div class="screen-content">
+      <div class="wp-hero">
+        <div class="wp-logo">🚗</div>
+        <div class="wp-title">WaitingPark</div>
+        <div class="wp-sub">Il parcheggio che ti aspettava</div>
+      </div>
+      <div class="features">
+        <div class="feature-row">
+          <div class="feature-icon" style="background:#FEE2E2">🔴</div>
+          <div class="feature-text">Segnala che stai uscendo e aiuta chi cerca</div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-icon" style="background:#FEF3C7">🔔</div>
+          <div class="feature-text">Ricevi notifiche in tempo reale per zona</div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-icon" style="background:#D1FAE5">💰</div>
+          <div class="feature-text">Guadagna €0,50 ogni volta che cedi il posto</div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-icon" style="background:#EEF2FF">⛽</div>
+          <div class="feature-text">Accumula 10 cessioni e vinci €5 di carburante</div>
+        </div>
+      </div>
+      <div class="wp-actions">
+        <button class="btn-primary" onclick="go('register')">Inizia — è gratis &nbsp;→</button>
+        <div class="link-btn" onclick="go('login')">Ho già un account</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="screen" id="register">
+    <div class="screen-content">
+      <div class="auth-content">
+        <div class="auth-header">
+          <div class="auth-title">Crea account</div>
+          <div class="auth-sub">Unisciti a WaitingPark — è gratuito</div>
+        </div>
+        <div class="auth-form">
+          <div class="input-group">
+            <div class="input-label">Nome completo</div>
+            <div class="input-wrap"><input class="input-field" type="text" placeholder="Marco Rossi"></div>
+          </div>
+          <div class="input-group">
+            <div class="input-label">Email</div>
+            <div class="input-wrap"><input class="input-field" type="email" placeholder="marco@email.com"></div>
+          </div>
+          <div class="input-group">
+            <div class="input-label">Password</div>
+            <div class="input-wrap"><input class="input-field" type="password" placeholder="••••••••"></div>
+          </div>
+          <div class="input-group">
+            <div class="input-label">Conferma password</div>
+            <div class="input-wrap"><input class="input-field" type="password" placeholder="••••••••"></div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="go('home')">Registrati</button>
+        <div class="link-btn" onclick="go('login')" style="margin-top:8px">Ho già un account</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="login">
+    <div class="screen-content">
+      <div class="auth-content">
+        <div class="auth-header">
+          <div class="auth-title">Bentornato</div>
+          <div class="auth-sub">Accedi al tuo account WaitingPark</div>
+        </div>
+        <div class="auth-form">
+          <div class="input-group">
+            <div class="input-label">Email</div>
+            <div class="input-wrap"><input class="input-field" type="email" placeholder="marco@email.com"></div>
+          </div>
+          <div class="input-group">
+            <div class="input-label">Password</div>
+            <div class="input-wrap"><input class="input-field" type="password" placeholder="••••••••"></div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="go('home')">Accedi</button>
+        <div class="link-btn" onclick="go('register')" style="margin-top:8px">Non hai un account? Registrati</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="home">
+    <div class="map-bg">
+      <svg class="map-svg" viewBox="0 0 390 710" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="390" height="710" fill="#e8ede8"/>
+        <rect x="0" y="330" width="390" height="32" fill="rgba(255,255,255,0.55)"/>
+        <rect x="170" y="0" width="32" height="710" fill="rgba(255,255,255,0.55)"/>
+        <rect x="0" y="160" width="390" height="20" fill="rgba(255,255,255,0.35)"/>
+        <rect x="80" y="0" width="20" height="710" fill="rgba(255,255,255,0.35)"/>
+        <rect x="290" y="0" width="20" height="710" fill="rgba(255,255,255,0.35)"/>
+        <rect x="0" y="510" width="390" height="20" fill="rgba(255,255,255,0.35)"/>
+        <rect x="60" y="200" width="90" height="110" rx="6" fill="#c8d4b8" opacity="0.8"/>
+        <rect x="240" y="80" width="110" height="60" rx="6" fill="#c8d4b8" opacity="0.8"/>
+        <rect x="20" y="400" width="40" height="80" rx="4" fill="#c8d4b8" opacity="0.8"/>
+        <rect x="300" y="380" width="70" height="100" rx="6" fill="#c8d4b8" opacity="0.8"/>
+        <circle cx="185" cy="346" r="8" fill="#4F46E5" opacity="0.9"/>
+        <circle cx="185" cy="346" r="14" fill="rgba(79,70,229,0.2)"/>
+        <circle cx="250" cy="250" r="6" fill="#EF4444" opacity="0.9"/>
+        <circle cx="120" cy="420" r="6" fill="#EF4444" opacity="0.9"/>
+      </svg>
+    </div>
+    <div class="home-overlay" style="position:absolute;top:50px;left:0;right:0;bottom:82px;display:flex;flex-direction:column;justify-content:space-between;">
+      <div class="home-top">
+        <div class="home-header-card">
+          <div>
+            <div class="home-greeting">Ciao, Marco 👋</div>
+            <div class="home-spots">2 posti disponibili vicino a te</div>
+          </div>
+          <div class="avatar" onclick="go('profile')">M</div>
+        </div>
+      </div>
+      <div>
+        <div class="home-fab-area">
+          <div class="fab">📍</div>
+        </div>
+        <div class="bottom-sheet">
+          <div class="handle"></div>
+          <div class="bs-title">Cosa vuoi fare?</div>
+          <div class="action-btn" onclick="go('leaving')">
+            <div class="action-icon" style="background:#FEE2E2">🚪</div>
+            <div class="action-text">
+              <div class="action-title">Sto uscendo dal parcheggio</div>
+              <div class="action-sub">Cedi il tuo posto e guadagna €0,50</div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="action-btn" onclick="go('search')">
+            <div class="action-icon" style="background:#D1FAE5">🔍</div>
+            <div class="action-text">
+              <div class="action-title">Cerco parcheggio</div>
+              <div class="action-sub">Ricevi notifica quando si libera un posto</div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="nearby-badge">
+            <span>📡</span>
+            <span class="nearby-text">2 posti si stanno liberando vicino a te</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar" style="position:absolute;bottom:0;left:0;right:0;">
+      <div class="tab-item active" onclick="go('home')"><div class="tab-icon">🏠</div><div class="tab-label">Home</div><div class="tab-dot"></div></div>
+      <div class="tab-item" onclick="go('chats')"><div class="tab-icon">💬</div><div class="tab-label">Chat</div></div>
+      <div class="tab-item" onclick="go('wallet')"><div class="tab-icon">💰</div><div class="tab-label">Portafoglio</div></div>
+      <div class="tab-item" onclick="go('profile')"><div class="tab-icon">👤</div><div class="tab-label">Profilo</div></div>
+    </div>
+  </div>
+
+  <!-- LEAVING -->
+  <div class="screen" id="leaving">
+    <div class="leaving-content">
+      <div class="page-header">
+        <button class="back-btn" onclick="go('home')">‹</button>
+        <div class="page-title">Sto uscendo</div>
+        <div style="width:40px"></div>
+      </div>
+      <div class="mini-map">
+        <div class="map-marker">🚪</div>
+      </div>
+      <div class="address-card">
+        <span>📍</span>
+        <span class="address-text">Via Roma 12, Milano</span>
+      </div>
+      <div class="section-label">Quando esci?</div>
+      <div class="timing-grid">
+        <div class="timing-btn active" onclick="selectTiming(this)"><div class="timing-label">Adesso</div><div class="timing-desc">Sto uscendo ora</div></div>
+        <div class="timing-btn" onclick="selectTiming(this)"><div class="timing-label">5 min</div><div class="timing-desc">Esco tra 5 minuti</div></div>
+        <div class="timing-btn" onclick="selectTiming(this)"><div class="timing-label">15 min</div><div class="timing-desc">Esco tra 15 minuti</div></div>
+        <div class="timing-btn" onclick="selectTiming(this)"><div class="timing-label">30 min</div><div class="timing-desc">Esco tra 30 minuti</div></div>
+      </div>
+      <div class="reward-banner">
+        <span style="font-size:20px;flex-shrink:0">⭐</span>
+        <div class="reward-text">Cedendo questo posto guadagni <span class="reward-amount">€0,50</span><br>Dopo 10 cessioni, ottieni <span class="reward-amount">€5 di carburante</span></div>
+      </div>
+      <div class="leaving-actions">
+        <button class="btn-primary btn-leaving" onclick="go('leaving_waiting')">Segnala il posto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAVING WAITING -->
+  <div class="screen" id="leaving_waiting">
+    <div class="waiting-container">
+      <div class="pulse-wrap">
+        <div class="pulse-ring pulse-ring-1"></div>
+        <div class="pulse-ring pulse-ring-2"></div>
+        <div class="pulse-core">🚪</div>
+      </div>
+      <div class="waiting-title">Segnalazione attiva</div>
+      <div class="waiting-sub">Stiamo cercando qualcuno che ha bisogno del tuo posto...</div>
+      <div class="info-card"><span>📍</span><span class="info-text">Via Roma 12, Milano</span></div>
+      <div class="info-card"><span>⏱</span><span class="info-text">Disponibile adesso</span></div>
+      <div class="earning-card"><span>💰</span><div class="earning-text">Guadagnerai <span class="earning-amt">€0,50</span> quando qualcuno prenota</div></div>
+      <button class="btn-outline" onclick="go('home')" style="margin-top:8px">Annulla segnalazione</button>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="screen" id="search">
+    <div class="search-content">
+      <div class="page-header">
+        <button class="back-btn" onclick="go('home')">‹</button>
+        <div class="page-title">Cerco parcheggio</div>
+        <div style="width:40px"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Seleziona zona</div>
+        <input class="input-field" type="text" placeholder="Es. Duomo, Navigli...">
+      </div>
+      <div>
+        <div class="section-label" style="margin-bottom:10px">Raggio di ricerca</div>
+        <div class="radius-chips">
+          <div class="chip" onclick="selectChip(this)">300m</div>
+          <div class="chip active" onclick="selectChip(this)">500m</div>
+          <div class="chip" onclick="selectChip(this)">1km</div>
+          <div class="chip" onclick="selectChip(this)">2km</div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label" style="margin-bottom:10px">Tipo di ricerca</div>
+        <div class="search-type-grid">
+          <div class="type-card active" onclick="selectType(this)">
+            <div class="type-icon">🔔</div>
+            <div><div class="type-title">Istantanea</div><div class="type-desc">Avvisami appena si libera qualcosa ora</div></div>
+          </div>
+          <div class="type-card" onclick="selectType(this)">
+            <div class="type-icon">📅</div>
+            <div><div class="type-title">Programmata</div><div class="type-desc">Pianifica per un orario specifico</div></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary btn-searching" onclick="go('match')" style="margin-top:4px">Inizia ricerca</button>
+    </div>
+  </div>
+
+  <!-- MATCH -->
+  <div class="screen" id="match">
+    <div class="match-content">
+      <div class="match-header">
+        <button class="back-btn" onclick="go('home')">‹</button>
+        <div class="match-title">Match trovato!</div>
+        <div class="live-badge">LIVE</div>
+      </div>
+      <div class="match-card">
+        <span style="font-size:28px">🎉</span>
+        <div class="match-card-text">
+          <div class="match-card-title">Posto trovato!</div>
+          <div class="match-card-sub">Luca sta uscendo in Via Roma 12 — tra 5 minuti</div>
+        </div>
+      </div>
+      <div class="mini-map" style="height:130px">
+        <div class="map-marker green">🚗</div>
+      </div>
+      <div class="chat-section">
+        <div class="chat-title">Chat rapida</div>
+        <div class="quick-replies">
+          <div class="quick-reply" onclick="sendQuick(this)">Sto arrivando! 🚗</div>
+          <div class="quick-reply" onclick="sendQuick(this)">Dove sei esattamente?</div>
+          <div class="quick-reply" onclick="sendQuick(this)">Grazie mille!</div>
+        </div>
+        <div class="messages" id="matchMessages">
+          <div class="msg msg-received">Sono quasi pronto, arrivo tra 5 min 👍</div>
+          <div class="msg msg-sent">Perfetto, sto arrivando! 🚗</div>
+        </div>
+      </div>
+      <div class="match-actions">
+        <button class="btn-primary btn-searching" onclick="go('home')">✅ Confermo arrivo</button>
+        <button class="btn-outline btn-outline-red" onclick="go('home')">✕ Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WALLET -->
+  <div class="screen" id="wallet">
+    <div class="wallet-content">
+      <div class="wallet-topbar">
+        <div class="wallet-title">Portafoglio</div>
+        <div class="icon-btn">⚙️</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-label">Saldo disponibile</div>
+        <div class="balance-amount">€4.50</div>
+        <div class="balance-actions">
+          <div class="bal-btn">⬇ Preleva</div>
+          <div class="bal-sep"></div>
+          <div class="bal-btn">💳 Carte</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon">🚪</div><div class="stat-value">7</div><div class="stat-label">Ceduti</div></div>
+        <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value">5</div><div class="stat-label">Presi</div></div>
+        <div class="stat-card"><div class="stat-icon">⛽</div><div class="stat-value">€0</div><div class="stat-label">Carburante</div></div>
+      </div>
+      <div class="reward-card">
+        <div class="reward-header"><span style="font-size:20px">🏆</span><div class="reward-title">Prossimo premio carburante</div></div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="reward-footer"><div class="progress-label">7/10 cessioni</div><div class="progress-rem">Mancano 3 per €5</div></div>
+        <div class="milestones">
+          <div class="milestone done">✓</div><div class="milestone done">✓</div><div class="milestone done">✓</div>
+          <div class="milestone done">✓</div><div class="milestone done">✓</div><div class="milestone done">✓</div>
+          <div class="milestone done">✓</div><div class="milestone">8</div><div class="milestone">9</div><div class="milestone">10</div>
+        </div>
+      </div>
+      <div class="tx-section">
+        <div class="tx-title">Transazioni recenti</div>
+        <div class="tx-row"><div class="tx-icon credit">⬇</div><div><div class="tx-desc">Posto ceduto — Via Roma</div><div class="tx-date">2h fa</div></div><div class="tx-amount credit">+€0,50</div></div>
+        <div class="tx-row"><div class="tx-icon debit">⬆</div><div><div class="tx-desc">Posto prenotato — Piazza Garibaldi</div><div class="tx-date">ieri</div></div><div class="tx-amount debit">-€0,50</div></div>
+        <div class="tx-row"><div class="tx-icon credit">⬇</div><div><div class="tx-desc">Posto ceduto — Via Napoli</div><div class="tx-date">2 giorni fa</div></div><div class="tx-amount credit">+€0,50</div></div>
+        <div class="tx-row"><div class="tx-icon fuel">⛽</div><div><div class="tx-desc">🎉 Premio carburante sbloccato!</div><div class="tx-date">1 sett. fa</div></div><div class="tx-amount credit">+€5,00</div></div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="go('home')"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+      <div class="tab-item" onclick="go('chats')"><div class="tab-icon">💬</div><div class="tab-label">Chat</div></div>
+      <div class="tab-item active" onclick="go('wallet')"><div class="tab-icon">💰</div><div class="tab-label">Portafoglio</div><div class="tab-dot"></div></div>
+      <div class="tab-item" onclick="go('profile')"><div class="tab-icon">👤</div><div class="tab-label">Profilo</div></div>
+    </div>
+  </div>
+
+  <!-- CHATS -->
+  <div class="screen" id="chats">
+    <div class="chats-content">
+      <div class="chats-title">Messaggi</div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:#4F46E5">L</div>
+        <div class="chat-info">
+          <div class="chat-name">Luca M.</div>
+          <div class="chat-last">Sto arrivando! 🚗</div>
+        </div>
+        <div class="chat-meta"><div class="chat-time">2min</div><div class="chat-badge">1</div></div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:#10B981">S</div>
+        <div class="chat-info">
+          <div class="chat-name">Sara B.</div>
+          <div class="chat-last">Grazie per il posto!</div>
+        </div>
+        <div class="chat-meta"><div class="chat-time">ieri</div></div>
+      </div>
+      <div class="chat-row">
+        <div class="chat-avatar" style="background:#F59E0B">G</div>
+        <div class="chat-info">
+          <div class="chat-name">Giorgio R.</div>
+          <div class="chat-last">Ok confermato</div>
+        </div>
+        <div class="chat-meta"><div class="chat-time">lun</div></div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="go('home')"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+      <div class="tab-item active" onclick="go('chats')"><div class="tab-icon">💬</div><div class="tab-label">Chat</div><div class="tab-dot"></div></div>
+      <div class="tab-item" onclick="go('wallet')"><div class="tab-icon">💰</div><div class="tab-label">Portafoglio</div></div>
+      <div class="tab-item" onclick="go('profile')"><div class="tab-icon">👤</div><div class="tab-label">Profilo</div></div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile">
+    <div class="profile-content">
+      <div class="profile-header">
+        <div class="profile-avatar">M</div>
+        <div class="profile-name">Marco Rossi</div>
+        <div class="profile-email">marco.rossi@email.com</div>
+        <div class="profile-badge">7 cessioni</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon">🚪</div><div class="stat-value">7</div><div class="stat-label">Ceduti</div></div>
+        <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value">5</div><div class="stat-label">Presi</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">€4,50</div><div class="stat-label">Saldo</div></div>
+      </div>
+      <div class="settings-list">
+        <div class="settings-row"><div class="settings-icon">🔔</div><div class="settings-label">Notifiche</div><div class="settings-chevron">›</div></div>
+        <div class="settings-row"><div class="settings-icon">💳</div><div class="settings-label">Metodo di pagamento</div><div class="settings-chevron">›</div></div>
+        <div class="settings-row"><div class="settings-icon">🔒</div><div class="settings-label">Privacy</div><div class="settings-chevron">›</div></div>
+        <div class="settings-row"><div class="settings-icon">💬</div><div class="settings-label">Supporto</div><div class="settings-chevron">›</div></div>
+        <div class="settings-row"><div class="settings-icon">📄</div><div class="settings-label">Termini e condizioni</div><div class="settings-chevron">›</div></div>
+      </div>
+      <button class="btn-outline btn-outline-red" onclick="go('welcome')">Esci dall'account</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-item" onclick="go('home')"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+      <div class="tab-item" onclick="go('chats')"><div class="tab-icon">💬</div><div class="tab-label">Chat</div></div>
+      <div class="tab-item" onclick="go('wallet')"><div class="tab-icon">💰</div><div class="tab-label">Portafoglio</div></div>
+      <div class="tab-item active" onclick="go('profile')"><div class="tab-icon">👤</div><div class="tab-label">Profilo</div><div class="tab-dot"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function go(id) {
+  const all = document.querySelectorAll('.screen');
+  all.forEach(s => s.classList.remove('active', 'slide-in'));
+  const target = document.getElementById(id);
+  if (target) { target.classList.add('active', 'slide-in'); }
+  const sb = document.getElementById('statusBar');
+  sb.classList.toggle('light', id === 'home');
+}
+function selectTiming(el) {
+  document.querySelectorAll('.timing-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function selectChip(el) {
+  el.closest('.radius-chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function selectType(el) {
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function sendQuick(el) {
+  const msgs = document.getElementById('matchMessages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-sent';
+  div.textContent = el.textContent;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+</script>
+</body>
+</html>
